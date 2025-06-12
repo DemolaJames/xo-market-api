@@ -1,0 +1,70 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int      @id @default(autoincrement())
+  walletAddress    String   @unique
+  isAdmin          Boolean  @default(false)
+  convictionPoints Int      @default(0)
+  createdAt        DateTime @default(now())
+  
+  // Relations
+  marketsCreated   Market[] @relation("MarketCreator")
+  marketsApproved  Market[] @relation("MarketApprover")
+  
+  @@map("users")
+}
+
+model MarketType {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique
+  description     String?
+  validationRules Json     // Simple JSON rules
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  markets         Market[]
+  
+  @@map("market_types")
+}
+
+model Market {
+  id              Int           @id @default(autoincrement())
+  title           String
+  description     String
+  expiry          DateTime
+  convictionLevel Float
+  marketTypeId    Int?
+  status          MarketStatus  @default(PENDING)
+  creatorId       Int
+  approvedById    Int?
+  approvedAt      DateTime?
+  txHash          String?
+  onchainId       Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  creator         User          @relation("MarketCreator", fields: [creatorId], references: [id])
+  approvedBy      User?         @relation("MarketApprover", fields: [approvedById], references: [id])
+  marketType      MarketType?    @relation(fields: [marketTypeId], references: [id])
+  
+  @@map("markets")
+}
+
+
+enum MarketStatus {
+  PENDING
+  APPROVED
+  LIVE
+  RESOLVED
+  FAILED
+}
